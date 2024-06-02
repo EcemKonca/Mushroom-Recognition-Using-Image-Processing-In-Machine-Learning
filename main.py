@@ -13,16 +13,16 @@ from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCh
 from sklearn.metrics import precision_score, recall_score, f1_score
 from sklearn.metrics import confusion_matrix, classification_report
 
-# Unzip the file and extract its contents
-zip_path = "C:/Users/ECEM/Downloads/archive (2).zip"
-extract_to = 'data'
+# Extract zip file
+zip_path = "C:/Users/ECEM/Downloads/archive (2).zip"  # Path to zip file
+extract_to = 'data'  # Target folder to extract
 
 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
     zip_ref.extractall(extract_to)
 
-data_dir = os.path.join(extract_to, 'mushroom')
+data_dir = os.path.join(extract_to, 'mushroom')  # Path to extracted files
 
-# Load and preprocess the dataset - Including Data Augmentation
+# Load and preprocess dataset - including data augmentation
 train_datagen = ImageDataGenerator(
     rescale=1. / 255,
     rotation_range=40,
@@ -56,57 +56,57 @@ base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(299
 for layer in base_model.layers:
     layer.trainable = False
 
-# Modifications in the Model Architecture and Applying Dropout
+# Modify model architecture and apply Dropout
 x = base_model.output
 x = GlobalAveragePooling2D()(x)
-x = Dense(1024, activation='relu')(x)  # Increase the number of neurons
-x = Dropout(0.3)(x)  # Increase dropout rate
+x = Dense(1024, activation='relu')(x)  # Increase number of neurons
+x = Dropout(0.3)(x)  # Increase Dropout rate
 x = Dense(512, activation='relu')(x)  # Additional Dense layer
-x = Dropout(0.3)(x)  # New dropout layer
+x = Dropout(0.3)(x)  # New Dropout layer
 predictions = Dense(1, activation='sigmoid')(x)
 model = Model(inputs=base_model.input, outputs=predictions)
 
-# Adjust the Learning Rate Dynamically
+# Dynamic learning rate adjustment
 reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=0.00001, verbose=1)
 
-# Early Stopping
+# Early stopping
 early_stop = EarlyStopping(monitor='val_loss', patience=10, verbose=1, restore_best_weights=True)
 model_checkpoint = ModelCheckpoint('best_model.h5', save_best_only=True, monitor='val_loss', mode='min')
 
-# Compile the Model
+# Compile the model
 model.compile(optimizer=Adam(learning_rate=0.0001), loss='binary_crossentropy', metrics=['accuracy'])
 
-# Train the Model
+# Train the model
 model.fit(train_generator,
           validation_data=validation_generator,
-          epochs=20,  # You can increase the number of epochs
+          epochs=20,  # Increase the number of epochs if needed
           steps_per_epoch=train_generator.samples // train_generator.batch_size,
           validation_steps=validation_generator.samples // validation_generator.batch_size,
           callbacks=[reduce_lr, early_stop, model_checkpoint])  # Add learning rate reduction callback
 
-# Fine-Tuning: Freeze the first 249 layers and unfreeze the remaining
+# Fine-tuning: freeze the first 249 layers and unfreeze the rest
 for layer in base_model.layers[:249]:
     layer.trainable = False
 for layer in base_model.layers[249:]:
     layer.trainable = True
 
-# Recompile the Model (After Fine-Tuning)
+# Re-compile the model (after fine-tuning)
 model.compile(optimizer=Adam(learning_rate=0.00001), loss='binary_crossentropy', metrics=['accuracy'])
 
-# Train the Model (With Fine-Tuning)
+# Train the model (with fine-tuning)
 history = model.fit(train_generator,
                     validation_data=validation_generator,
-                    epochs=20,  # Adjust the number of epochs for fine-tuning
+                    epochs=20,  # Adjust number of epochs for fine-tuning
                     steps_per_epoch=train_generator.samples // train_generator.batch_size,
                     validation_steps=validation_generator.samples // validation_generator.batch_size,
                     callbacks=[reduce_lr, early_stop, model_checkpoint])
 
-# Evaluate the Model on the Validation Set
+# Evaluate the model on the validation set
 validation_generator.reset()
 y_pred = model.predict(validation_generator, steps=validation_generator.samples // validation_generator.batch_size)
 y_pred = np.round(y_pred).astype(int)
 
-# Calculate the True Labels and Performance Metrics
+# Calculate true labels and performance metrics
 y_true = validation_generator.classes[:len(y_pred)]
 
 precision = precision_score(y_true, y_pred)
@@ -117,7 +117,7 @@ print(f"Validation Precision: {precision}")
 print(f"Validation Recall: {recall}")
 print(f"Validation F1 Score: {f1}")
 
-# Data for Graphs
+# Data for plotting graphs
 acc = history.history['accuracy']
 val_acc = history.history['val_accuracy']
 loss = history.history['loss']
@@ -126,7 +126,7 @@ lr = history.history['lr']
 
 epochs_range = range(len(acc))
 
-# Accuracy and Loss Graphs
+# Plot Accuracy and Loss graphs
 plt.figure(figsize=(14, 7))
 plt.subplot(1, 2, 1)
 plt.plot(epochs_range, acc, label='Training Accuracy')
@@ -141,7 +141,7 @@ plt.title('Training and Validation Loss')
 plt.legend(loc='upper right')
 plt.show()
 
-# Learning Rate Change Graph
+# Plot Learning Rate Change
 plt.figure(figsize=(7, 5))
 plt.plot(epochs_range, lr, label='Learning Rate')
 plt.title('Learning Rate Over Epochs')
@@ -165,17 +165,16 @@ plt.show()
 report = classification_report(true_classes, predicted_classes, target_names=['Edible', 'Poisonous'])
 print(report)
 
-# Export the Keras model in SavedModel format
-# model.save("my_model")
+# Export Keras model in SavedModel format
 tf.saved_model.save(model, "my_model")
-# Convert the model using TensorFlow Lite Converter
-converter = tf.lite.TFLiteConverter.from_saved_model("my_model")  # or load the .h5 file
+# Convert model using TensorFlow Lite Converter
+converter = tf.lite.TFLiteConverter.from_saved_model("my_model")  # or load .h5 file
 converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS]  # TF Lite native supported operations
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
 tflite_model = converter.convert()
 
 # Save the TensorFlow Lite model to disk
-with open("model.tflite", "wb") as f:
+with open("model5.tflite", "wb") as f:
     f.write(tflite_model)
 
 labels = ["edible", "poisonous"]  # Example label list
