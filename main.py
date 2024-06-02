@@ -180,3 +180,4 @@ with open("model5.tflite", "wb") as f:
 labels = ["edible", "poisonous"]  # Example label list
 with open("labels.txt", "w") as f:
     f.write("\n".join(labels))
+
